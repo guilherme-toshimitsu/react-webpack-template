@@ -1,0 +1,103 @@
+stages:
+  - sanity_check
+  - tests
+  - sonar
+  - deploy staging
+  - deploy prod
+
+sanity_check:
+  image: node:12.14.1-alpine3.9
+  stage: sanity_check
+  allow_failure: true
+  script:
+    - npm i npm -g
+    - npm i
+    - npm run prettier
+    - npm run eslint
+
+tests:
+  image: ubuntu:18.04
+  stage: tests
+  allow_failure: true
+  script:
+    - echo $REACT_APP_SONAR_DASHBOARD_URL
+    - cp .env.example .env
+    - export REACT_APP_MOCK_API="true"
+    - apt-get update -y
+    - apt-get install curl -y
+    - curl -sL https://deb.nodesource.com/setup_12.x | bash
+    - apt-get install nodejs -y
+    - node -v
+    - npm -v
+    - npm i npm -g
+    - npm i
+    - npm audit fix
+    - npm run test:prod
+  only:
+    - develop
+
+sonar:
+  image: ubuntu:18.04
+  stage: sonar
+  script:
+    - echo $REACT_APP_SONAR_DASHBOARD_URL
+    - cp .env.example .env
+    - export REACT_APP_MOCK_API="true"
+    - apt-get update -y
+    - apt-get install curl -y
+    - curl -sL https://deb.nodesource.com/setup_12.x | bash
+    - apt-get install nodejs -y
+    - node -v
+    - npm -v
+    - npm i npm -g
+    - npm i
+    - npm i --save sonar-scanner
+    - npm audit fix
+    - ls -la
+    - npm run sonar
+  only:
+    - tags
+
+deploy staging:
+  image: google/cloud-sdk:alpine
+  stage: deploy staging
+  script:
+    - apk add --update nodejs npm
+    - export REACT_APP_API_URL=$REACT_APP_API_URL_STAGING
+    - cp .env.example .env
+    - npm i -g npm
+    - npm i
+    - npm run build
+    - echo $GCP_SA_STAGING > service-key-staging.json
+    - export GOOGLE_APPLICATION_CREDENTIALS=./service-key-staging.json
+    - gcloud auth activate-service-account --key-file service-key-staging.json
+    # - gsutil rm gs://$BUCKET_STAGING/**
+    - cd ./build
+    - gsutil cp -r ./ gs://$BUCKET_STAGING
+    - gsutil -m acl set -R -a public-read gs://$BUCKET_STAGING
+    - gsutil web set -m ./index.html gs://$BUCKET_STAGING
+  only:
+    - develop
+  when: manual
+
+deploy prod:
+  image: google/cloud-sdk:alpine
+  stage: deploy prod
+  script:
+    - apk add --update nodejs npm
+    - export REACT_APP_API_URL=$REACT_APP_API_URL_PROD
+    - cp .env.example .env
+    - npm i -g npm
+    - npm i
+    - npm run build
+    - echo $GCP_SA_PRODUCTION > service-key-staging.json
+    - export GOOGLE_APPLICATION_CREDENTIALS=./service-key-staging.json
+    - gcloud auth activate-service-account --key-file service-key-staging.json
+    - gsutil rm gs://$BUCKET_PROD/**
+    - cd ./build
+    - gsutil cp -r ./ gs://$BUCKET_PROD
+    - gsutil -m acl set -R -a public-read gs://$BUCKET_PROD
+    - gsutil web set -m ./index.html gs://$BUCKET_PROD
+  only:
+    - tags
+  when: manual
