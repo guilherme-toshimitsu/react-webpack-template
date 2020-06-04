@@ -11,14 +11,16 @@ module.exports = () => {
   }, {});
 
   return {
-    entry: ['@babel/polyfill', path.resolve(__dirname, 'src', 'index.js')],
+    entry: path.resolve(__dirname, 'src', 'index.js'),
+    devtool: 'inline-source-map',
     output: {
-      path: path.join(__dirname, 'public'),
+      path: path.resolve(__dirname, 'public'),
       filename: 'bundle.js',
     },
     devServer: {
       inline: true,
       port: 3000,
+      historyApiFallback: true,
     },
     module: {
       rules: [
@@ -37,6 +39,10 @@ module.exports = () => {
         {
           test: /\.(png|svg|jpg|gif)$/,
           use: ['file-loader'],
+        },
+        {
+          test: /\.json$/,
+          loader: 'json',
         },
       ],
     },
@@ -58,7 +64,7 @@ module.exports = () => {
         // "@svg": "svg-inline-loader?classPrefix!./src/assets/images/icons",
         '@utils': path.resolve(__dirname, 'src', 'commons/utils'),
       },
-      extensions: ['.jsx', '.js'],
+      extensions: ['.jsx', '.js', 'json'],
     },
   };
 };
