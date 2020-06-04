@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Route, Switch } from 'react-router-dom';
 
-import RouteContainer from './RouteContainer';
+import RouteAuth from './RouteAuth';
 
 const Routes = ({ routes, ...props }) => {
   return (
@@ -12,9 +12,7 @@ const Routes = ({ routes, ...props }) => {
           key={index}
           path={route.path}
           exact={route.exact}
-          {...props}
-          // Create routeChecker for authorizations.
-          render={renderProps => <RouteContainer {...renderProps} route={route} {...props} />}
+          render={(renderProps) => <RouteAuth {...renderProps} route={route} />}
         />
       ))}
     </Switch>
